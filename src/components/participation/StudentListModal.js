@@ -11,47 +11,40 @@ const StudentListModal = ({ visible, onClose, activity, onApprove, onReject }) =
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [studentsToReject, setStudentsToReject] = useState([]);
-  // Sample data - จะถูกแทนที่ด้วยข้อมูลจริงจาก API
-  const students = {
-    approved: [
-      {
-        id: 1,
-        studentId: "6501101001",
-        name: "สมชาย ใจดี",
-        department: "คอมพิวเตอร์ศึกษา",
-        major: "TCT",
-        year: "3",
-      },
-      {
-        id: 2,
-        studentId: "6501101002",
-        name: "สมหญิง รักเรียน",
-        department: "คอมพิวเตอร์ศึกษา",
-        major: "CED",
-        year: "2",
-      },
-    ],
-    pending: [
-      {
-        id: 3,
-        studentId: "6501101003",
-        name: "สมศักดิ์ มานะ",
-        department: "คอมพิวเตอร์ศึกษา",
-        major: "TCT",
-        year: "4",
-      },
-    ],
-    rejected: [
-      {
-        id: 4,
-        studentId: "6501101004",
-        name: "สมปอง ขยัน",
-        department: "คอมพิวเตอร์ศึกษา",
-        major: "CED",
-        year: "1",
-      },
-    ],
+
+  // Process attendances data from activity
+  const getStudentsFromAttendances = () => {
+    if (!activity?.attendances) {
+      return { approved: [], pending: [], rejected: [] };
+    }
+
+    const approved = [];
+    const pending = [];
+    const rejected = [];
+
+    activity.attendances.forEach((attendance) => {
+      const student = {
+        ...attendance,
+        studentId: attendance.user?.studentId || "-",
+        name: attendance.user?.fullname || "Unknown",
+        department: attendance.user?.department?.name || "-",
+        major: attendance.user?.major?.name || "-",
+        year: attendance.user?.level || "-",
+      };
+
+      if (attendance.status === "accepted") {
+        approved.push(student);
+      } else if (["joined", "Inprogress"].includes(attendance.status)) {
+        pending.push(student);
+      } else if (attendance.status === "rejected") {
+        rejected.push(student);
+      }
+    });
+
+    return { approved, pending, rejected };
   };
+
+  const students = getStudentsFromAttendances();
 
   const handleBulkApprove = () => {
     const selectedStudents = students.pending.filter((student) =>
@@ -265,7 +258,7 @@ const StudentListModal = ({ visible, onClose, activity, onApprove, onReject }) =
             รายการนักศึกษา
           </h3>
           <p className="text-sm text-gray-500 mt-1">
-            {activity?.activityName || "กิจกรรม"}
+            {activity?.name || activity?.activityName || "กิจกรรม"}
           </p>
         </div>
       }

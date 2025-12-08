@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { Tabs, Card, message } from "antd";
+import { useState, useEffect } from "react";
+import { Tabs, Card, message, Spin } from "antd";
 import { Users, FileCheck } from "lucide-react";
 import SearchFilterBar from "@/components/participation/SearchFilterBar";
 import ParticipationTable from "@/components/participation/ParticipationTable";
 import StudentListModal from "@/components/participation/StudentListModal";
 import EvidenceListModal from "@/components/participation/EvidenceListModal";
+import { getAllActivities } from "@/services/activity";
+import { getAllAttendances, updateAttendance } from "@/services/attendance";
 
 export default function ParticipationPage() {
   const [activeTab, setActiveTab] = useState("participation");
@@ -19,87 +21,89 @@ export default function ParticipationPage() {
   const [modalVisible, setModalVisible] = useState(false);
   const [evidenceModalVisible, setEvidenceModalVisible] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [activities, setActivities] = useState([]);
+  const [attendances, setAttendances] = useState([]);
 
-  const mockData = [
-    {
-      id: 1,
-      activityName: "Community Service Project",
-      department: "Computer Education",
-      major: "TCT",
-      studentCount: 15,
-      maxStudents: 30,
-    },
-    {
-      id: 2,
-      activityName: "Technology Training Workshop",
-      department: "Electrical Engineering",
-      major: "CED",
-      studentCount: 28,
-      maxStudents: 30,
-    },
-    {
-      id: 3,
-      activityName: "Programming Skills Development",
-      department: "Computer Education",
-      major: "TCT",
-      studentCount: 10,
-      maxStudents: 25,
-    },
-    {
-      id: 4,
-      activityName: "Civil Engineering Workshop",
-      department: "Civil Engineering Education",
-      major: "CED",
-      studentCount: 20,
-      maxStudents: 35,
-    },
-    {
-      id: 5,
-      activityName: "Mechanical Skills Training",
-      department: "Mechanical Engineering Education",
-      major: "TCT",
-      studentCount: 18,
-      maxStudents: 30,
-    },
-    {
-      id: 6,
-      activityName: "IT Management Seminar",
-      department: "Information Technology Education",
-      major: "CED",
-      studentCount: 25,
-      maxStudents: 40,
-    },
-  ];
+  // Fetch data from API
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [activitiesData, attendancesData] = await Promise.all([
+        getAllActivities(),
+        getAllAttendances(),
+      ]);
+
+      setActivities(activitiesData);
+      setAttendances(attendancesData);
+    } catch (error) {
+      message.error("ไม่สามารถโหลดข้อมูลการเข้าร่วมได้");
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Get activities with attendance counts
+  const getActivitiesWithAttendances = () => {
+    return activities.map((activity) => {
+      // Count attendances for this activity
+      const activityAttendances = attendances.filter(
+        (att) => att.activityId === activity.id
+      );
+
+      // For participation tab - count joined/accepted/Inprogress
+      const participationCount = activityAttendances.filter(
+        (att) => ["joined", "accepted", "Inprogress"].includes(att.status)
+      ).length;
+
+      // For evidence tab - count completed
+      const evidenceCount = activityAttendances.filter(
+        (att) => ["completed", "uncompleted"].includes(att.status)
+      ).length;
+
+      return {
+        ...activity,
+        participationCount,
+        evidenceCount,
+        attendances: activityAttendances,
+      };
+    });
+  };
 
   // Filter and search data
   const getFilteredData = () => {
-    let filtered = [...mockData];
+    let filtered = getActivitiesWithAttendances();
 
     // Apply search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (item) =>
-          item.activityName.toLowerCase().includes(query) ||
-          item.department.toLowerCase().includes(query) ||
-          item.major.toLowerCase().includes(query)
+          item.name?.toLowerCase().includes(query) ||
+          item.department?.name?.toLowerCase().includes(query)
       );
     }
 
     // Apply department filter
     if (filters.department) {
-      filtered = filtered.filter((item) => item.department === filters.department);
+      filtered = filtered.filter((item) => item.department?.name === filters.department);
     }
 
     // Apply major filter
     if (filters.major) {
-      filtered = filtered.filter((item) => item.major === filters.major);
+      filtered = filtered.filter((item) =>
+        item.majorJoins?.some((mj) => mj.major?.name === filters.major)
+      );
     }
 
-    // Apply year filter (if needed in the future)
+    // Apply year filter
     if (filters.year) {
-      // Can be implemented when student data includes year
-      // filtered = filtered.filter((item) => item.year === filters.year);
+      filtered = filtered.filter((item) => item.level === `ปี ${filters.year}`);
     }
 
     return filtered;
@@ -144,20 +148,48 @@ export default function ParticipationPage() {
     message.success(`Deleted activity: ${record.activityName}`);
   };
 
-  const handleApprove = (student) => {
-    message.success(`Approved ${student.name}`);
+  const handleApprove = async (attendance) => {
+    try {
+      await updateAttendance(attendance.id, { status: "accepted" });
+      message.success(`อนุมัติการเข้าร่วมสำเร็จ`);
+      fetchData(); // Refresh data
+    } catch (error) {
+      message.error("ไม่สามารถอนุมัติการเข้าร่วมได้");
+      console.error("Error approving attendance:", error);
+    }
   };
 
-  const handleReject = (student) => {
-    message.error(`Rejected ${student.name}`);
+  const handleReject = async (attendance) => {
+    try {
+      await updateAttendance(attendance.id, { status: "rejected" });
+      message.error(`ปฏิเสธการเข้าร่วมสำเร็จ`);
+      fetchData(); // Refresh data
+    } catch (error) {
+      message.error("ไม่สามารถปฏิเสธการเข้าร่วมได้");
+      console.error("Error rejecting attendance:", error);
+    }
   };
 
-  const handleApproveEvidence = (student) => {
-    message.success(`Evidence approved for ${student.name}`);
+  const handleApproveEvidence = async (attendance) => {
+    try {
+      await updateAttendance(attendance.id, { status: "completed" });
+      message.success(`อนุมัติหลักฐานสำเร็จ`);
+      fetchData(); // Refresh data
+    } catch (error) {
+      message.error("ไม่สามารถอนุมัติหลักฐานได้");
+      console.error("Error approving evidence:", error);
+    }
   };
 
-  const handleRejectEvidence = (student) => {
-    message.error(`Evidence rejected for ${student.name}`);
+  const handleRejectEvidence = async (attendance) => {
+    try {
+      await updateAttendance(attendance.id, { status: "uncompleted" });
+      message.error(`ปฏิเสธหลักฐานสำเร็จ`);
+      fetchData(); // Refresh data
+    } catch (error) {
+      message.error("ไม่สามารถปฏิเสธหลักฐานได้");
+      console.error("Error rejecting evidence:", error);
+    }
   };
 
   const tabItems = [
@@ -183,12 +215,15 @@ export default function ParticipationPage() {
               boxShadow: "0 2px 8px rgba(10, 137, 76, 0.08)",
             }}
           >
-            <ParticipationTable
-              data={getFilteredData()}
-              onView={handleView}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
+            <Spin spinning={loading}>
+              <ParticipationTable
+                data={getFilteredData()}
+                onView={handleView}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                showParticipationCount={true}
+              />
+            </Spin>
           </Card>
         </div>
       ),
@@ -215,12 +250,15 @@ export default function ParticipationPage() {
               boxShadow: "0 2px 8px rgba(10, 137, 76, 0.08)",
             }}
           >
-            <ParticipationTable
-              data={getFilteredData()}
-              onView={handleViewEvidence}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
+            <Spin spinning={loading}>
+              <ParticipationTable
+                data={getFilteredData()}
+                onView={handleViewEvidence}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                showEvidenceCount={true}
+              />
+            </Spin>
           </Card>
         </div>
       ),

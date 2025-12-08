@@ -6,6 +6,7 @@ import { Mail, Lock, LogIn } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import CustomButton from "@/components/asset/CustomButton";
+import { login } from "../../../services/auth";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -14,18 +15,38 @@ export default function LoginPage() {
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      // TODO: Implement actual login logic here
-      console.log("Login values:", values);
+      const data = await login(values.email, values.password);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Store token
+      localStorage.setItem("token", data.token);
+
+      // Store user data in localStorage from response
+      const userData = {
+        id: data.user.id,
+        studentId: data.user.studentId,
+        fullname: data.user.fullname,
+        email: data.user.email,
+        phone: data.user.phone,
+        departmentId: data.user.departmentId,
+        departmentName: data.user.department?.name || "",
+        majorId: data.user.majorId,
+        userType: data.user.userType,
+        birthday: data.user.birthday,
+        level: data.user.level,
+        profilePic: data.user.profilePic,
+        status: data.user.status
+      };
+      localStorage.setItem("user", JSON.stringify(userData));
 
       message.success("เข้าสู่ระบบสำเร็จ");
 
-      // Navigate based on role (example)
-      // router.push('/student/home');
-      // router.push('/teacher/home');
-      // router.push('/admin/home');
+      if (userData.userType === "student") {
+        router.push("/student/home");
+      } else if (userData.userType === "teacher") {
+        router.push("/teacher/home");
+      } else if (userData.userType === "admin") {
+        router.push("/admin/home");
+      }
     } catch (error) {
       message.error("เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
     } finally {
@@ -45,7 +66,7 @@ export default function LoginPage() {
         <div className="text-center mb-6">
           <div className="flex justify-center ">
             <Image
-              src="/fte-removebg-preview 1 (1).png"
+              src="/Logo.png"
               alt="TAS Logo"
               width={200}
               height={200}
@@ -64,15 +85,13 @@ export default function LoginPage() {
         >
           <Form.Item
             name="email"
-            label={<span className="text-gray-700 font-medium">อีเมล</span>}
+            label={
+              <span className="text-gray-700 font-medium">รหัสนักศึกษา</span>
+            }
             rules={[
               {
                 required: true,
-                message: "กรุณากรอกอีเมล",
-              },
-              {
-                type: "email",
-                message: "รูปแบบอีเมลไม่ถูกต้อง",
+                message: "กรุณากรอกรหัสนักศึกษา",
               },
             ]}
           >

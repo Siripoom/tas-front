@@ -1,9 +1,14 @@
 "use client";
 
-import { Table, Button, Popconfirm, Tag } from "antd";
-import { Eye, Edit, Trash2 } from "lucide-react";
+import { Table, Button, Tag } from "antd";
+import { Eye } from "lucide-react";
 
-const ParticipationTable = ({ data, onView, onEdit, onDelete }) => {
+const ParticipationTable = ({
+  data,
+  onView,
+  showParticipationCount = false,
+  showEvidenceCount = false
+}) => {
   const columns = [
     {
       title: "ลำดับ",
@@ -15,44 +20,85 @@ const ParticipationTable = ({ data, onView, onEdit, onDelete }) => {
     },
     {
       title: "กิจกรรม",
-      dataIndex: "activityName",
       key: "activityName",
       ellipsis: true,
+      render: (_, record) => record.name || record.activityName,
     },
     {
       title: "ภาควิชา",
-      dataIndex: "department",
       key: "department",
       width: 180,
+      render: (_, record) => record.department?.name || record.department || "-",
     },
     {
       title: "สาขาวิชา",
-      dataIndex: "major",
       key: "major",
-      width: 120,
+      width: 150,
       align: "center",
-      render: (major) => (
-        <Tag
-          color="#0A894C"
-          style={{
-            borderRadius: 8,
-            fontWeight: 500,
-          }}
-        >
-          {major}
-        </Tag>
-      ),
+      render: (_, record) => {
+        // Handle API data with majorJoins
+        if (record.majorJoins && record.majorJoins.length > 0) {
+          return (
+            <div className="flex flex-wrap gap-1 justify-center">
+              {record.majorJoins.map((mj, idx) => (
+                <Tag
+                  key={idx}
+                  color="#0A894C"
+                  style={{
+                    borderRadius: 8,
+                    fontWeight: 500,
+                  }}
+                >
+                  {mj.major?.name}
+                </Tag>
+              ))}
+            </div>
+          );
+        }
+        // Handle mock data
+        if (record.major) {
+          return (
+            <Tag
+              color="#0A894C"
+              style={{
+                borderRadius: 8,
+                fontWeight: 500,
+              }}
+            >
+              {record.major}
+            </Tag>
+          );
+        }
+        return <span className="text-gray-400">ทุกสาขา</span>;
+      },
     },
     {
-      title: "จำนวนนักศึกษา",
-      dataIndex: "studentCount",
+      title: showParticipationCount ? "จำนวนผู้เข้าร่วม" : showEvidenceCount ? "จำนวนส่งหลักฐาน" : "จำนวนนักศึกษา",
       key: "studentCount",
       width: 150,
       align: "center",
-      render: (count, record) => {
-        const percentage = (count / record.maxStudents) * 100;
+      render: (_, record) => {
+        // Determine which count to show
+        let count, max;
+
+        if (showParticipationCount) {
+          count = record.participationCount || 0;
+          max = record.maxPeopleCount || record.maxStudents || 0;
+        } else if (showEvidenceCount) {
+          count = record.evidenceCount || 0;
+          max = record.maxPeopleCount || record.maxStudents || 0;
+        } else {
+          count = record.studentCount || record.peopleCount || 0;
+          max = record.maxStudents || record.maxPeopleCount || 0;
+        }
+
+        const percentage = max > 0 ? (count / max) * 100 : 0;
         const color =
-          percentage >= 80 ? "#f5222d" : percentage >= 50 ? "#fa8c16" : "#0A894C";
+          percentage >= 80
+            ? "#f5222d"
+            : percentage >= 50
+            ? "#fa8c16"
+            : "#0A894C";
 
         return (
           <span
@@ -62,7 +108,7 @@ const ParticipationTable = ({ data, onView, onEdit, onDelete }) => {
               fontSize: "14px",
             }}
           >
-            {count}/{record.maxStudents}
+            {count}/{max}
           </span>
         );
       },
@@ -70,7 +116,7 @@ const ParticipationTable = ({ data, onView, onEdit, onDelete }) => {
     {
       title: "การจัดการ",
       key: "action",
-      width: 150,
+      width: 120,
       align: "center",
       render: (_, record) => (
         <div className="flex gap-2 justify-center">
@@ -81,30 +127,6 @@ const ParticipationTable = ({ data, onView, onEdit, onDelete }) => {
             style={{ color: "#0A894C" }}
             title="ดูรายละเอียด"
           />
-          <Button
-            type="text"
-            icon={<Edit size={18} />}
-            onClick={() => onEdit(record)}
-            style={{ color: "#1890ff" }}
-            title="แก้ไข"
-          />
-          <Popconfirm
-            title="ยืนยันการลบ"
-            description="คุณแน่ใจหรือไม่ว่าต้องการลบกิจกรรมนี้?"
-            onConfirm={() => onDelete(record)}
-            okText="ยืนยัน"
-            cancelText="ยกเลิก"
-            okButtonProps={{
-              style: { backgroundColor: "#0A894C", borderColor: "#0A894C" },
-            }}
-          >
-            <Button
-              type="text"
-              icon={<Trash2 size={18} />}
-              danger
-              title="ลบ"
-            />
-          </Popconfirm>
         </div>
       ),
     },

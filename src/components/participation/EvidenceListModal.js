@@ -14,42 +14,28 @@ const EvidenceListModal = ({ visible, onClose, activity, onApprove, onReject }) 
   const [rejectReason, setRejectReason] = useState("");
   const [studentsToReject, setStudentsToReject] = useState([]);
 
-  // Sample data - students with uploaded evidence
-  const studentsWithEvidence = [
-    {
-      id: 1,
-      studentId: "6501101001",
-      name: "John Doe",
-      department: "Computer Education",
-      major: "TCT",
-      year: "3",
-      evidenceUrl: "https://via.placeholder.com/400x300?text=Evidence+1",
-      uploadDate: "2024-01-15",
-      status: "pending", // pending, approved, rejected
-    },
-    {
-      id: 2,
-      studentId: "6501101002",
-      name: "Jane Smith",
-      department: "Computer Education",
-      major: "CED",
-      year: "2",
-      evidenceUrl: "https://via.placeholder.com/400x300?text=Evidence+2",
-      uploadDate: "2024-01-16",
-      status: "pending",
-    },
-    {
-      id: 3,
-      studentId: "6501101003",
-      name: "Bob Johnson",
-      department: "Computer Education",
-      major: "TCT",
-      year: "4",
-      evidenceUrl: "https://via.placeholder.com/400x300?text=Evidence+3",
-      uploadDate: "2024-01-14",
-      status: "approved",
-    },
-  ];
+  // Process attendances data from activity for evidence
+  const getStudentsWithEvidence = () => {
+    if (!activity?.attendances) {
+      return [];
+    }
+
+    return activity.attendances
+      .filter((attendance) => ["completed", "uncompleted"].includes(attendance.status))
+      .map((attendance) => ({
+        ...attendance,
+        studentId: attendance.user?.studentId || "-",
+        name: attendance.user?.fullname || "Unknown",
+        department: attendance.user?.department?.name || "-",
+        major: attendance.user?.major?.name || "-",
+        year: attendance.user?.level || "-",
+        evidenceUrl: null, // TODO: Get from fileActivities
+        uploadDate: attendance.updatedAt?.split('T')[0] || "-",
+        status: attendance.status === "completed" ? "approved" : "pending",
+      }));
+  };
+
+  const studentsWithEvidence = getStudentsWithEvidence();
 
   const handlePreview = (imageUrl) => {
     setPreviewImage(imageUrl);
@@ -237,7 +223,7 @@ const EvidenceListModal = ({ visible, onClose, activity, onApprove, onReject }) 
               Evidence Review
             </h3>
             <p className="text-sm text-gray-500 mt-1">
-              {activity?.activityName || "Activity"}
+              {activity?.name || activity?.activityName || "กิจกรรม"}
             </p>
           </div>
         }

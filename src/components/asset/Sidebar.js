@@ -25,18 +25,18 @@ const studentMenuItems = [
   {
     key: "/student/participation",
     icon: <CalendarCheck size={20} />,
-    label: "กิจกรรมที่เข้าร่วม",
+    label: "กิจกรรม",
   },
-  {
-    key: "/student/submit-event",
-    icon: <Send size={20} />,
-    label: "ส่งกิจกรรม",
-  },
-  {
-    key: "/student/report",
-    icon: <FileText size={20} />,
-    label: "รายงาน",
-  },
+  // {
+  //   key: "/student/submit-event",
+  //   icon: <Send size={20} />,
+  //   label: "ส่งกิจกรรม",
+  // },
+  // {
+  //   key: "/student/report",
+  //   icon: <FileText size={20} />,
+  //   label: "รายงาน",
+  // },
 ];
 
 // เมนูสำหรับครู

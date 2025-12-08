@@ -4,12 +4,12 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Layout } from "antd";
 import Sidebar from "@/components/asset/Sidebar";
-import AdminHeader from "@/components/asset/AdminHeader";
+import TeacherHeader from "@/components/asset/TeacherHeader";
 import "../globals.css";
 
 const { Content } = Layout;
 
-export default function AdminLayout({ children }) {
+export default function TeacherLayout({ children }) {
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -32,9 +32,9 @@ export default function AdminLayout({ children }) {
         const userData = JSON.parse(storedUser);
         console.log("User Data:", userData);
 
-        // เช็คว่า role เป็น admin หรือไม่
-        if (userData.role === "admin") {
-          // ถ้าไม่ใช่ admin ให้ redirect ไปหน้า login
+        // เช็คว่า role เป็น teacher หรือไม่
+        if (userData.role === "teacher") {
+          // ถ้าไม่ใช่ teacher ให้ redirect ไปหน้า login
           alert("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
           localStorage.clear(); // ลบข้อมูลทั้งหมด
           router.push("/login");
@@ -60,7 +60,7 @@ export default function AdminLayout({ children }) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#3D5753]"></div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#0A894C]"></div>
           <p className="mt-4 text-gray-600">กำลังตรวจสอบสิทธิ์...</p>
         </div>
       </div>
@@ -75,7 +75,7 @@ export default function AdminLayout({ children }) {
   return (
     <Layout style={{ minHeight: "100vh" }}>
       <Sidebar
-        userRole="admin"
+        userRole="teacher"
         collapsed={collapsed}
         onCollapse={setCollapsed}
       />
@@ -85,7 +85,7 @@ export default function AdminLayout({ children }) {
           transition: "margin-left 0.2s",
         }}
       >
-        <AdminHeader />
+        <TeacherHeader />
         <Content
           style={{
             margin: "24px 16px",
