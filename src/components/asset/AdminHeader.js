@@ -99,7 +99,7 @@ const AdminHeader = () => {
       icon: <LogOut size={16} />,
       label: "ออกจากระบบ",
       danger: true,
-      onClick: handleLogout,
+      onClick: () => handleLogout(),
     },
   ];
 

@@ -41,3 +41,13 @@ export const getActivitiesByResponsible = async (userId) => {
   const response = await apiClient.get(`/activities/responsible/${userId}`);
   return response.data;
 };
+
+// Get activities with query parameters with departmentId or year Query: one of `departmentId` **or** `year` **or** `typeActivityId` (must send exactly one)
+export const getActivitiesWithQuery = async (queryParams) => {
+  const response = await apiClient.get("/activities/filter", {
+    params: queryParams,
+  });
+  console.log(response.data);
+
+  return response.data;
+};
