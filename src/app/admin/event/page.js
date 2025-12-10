@@ -1,9 +1,35 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, Button, Input, message, Table, Popconfirm, Tag, Modal, Form, Select, Upload, Spin } from "antd";
-import { Plus, Search, Edit, Trash2, Eye, Upload as UploadIcon } from "lucide-react";
-import { getAllActivities, createActivity, updateActivity, deleteActivity } from "@/services/activity";
+import {
+  Card,
+  Button,
+  Input,
+  message,
+  Table,
+  Popconfirm,
+  Tag,
+  Modal,
+  Form,
+  Select,
+  Upload,
+  Spin,
+} from "antd";
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  Eye,
+  Upload as UploadIcon,
+} from "lucide-react";
+import {
+  getAllActivities,
+  createActivity,
+  updateActivity,
+  deleteActivity,
+} from "@/services/activity";
+import { getAllDepartments } from "@/services/department";
 import { getAllTypeActivities } from "@/services/typeActivity";
 import { getAllUsers } from "@/services/user";
 
@@ -33,11 +59,9 @@ export default function EventPage() {
     setLoading(true);
     try {
       // Fetch activities, type activities, and users
-      const [activitiesData, typeActivitiesData, usersData] = await Promise.all([
-        getAllActivities(),
-        getAllTypeActivities(),
-        getAllUsers(),
-      ]);
+      const [activitiesData, typeActivitiesData, usersData] = await Promise.all(
+        [getAllActivities(), getAllTypeActivities(), getAllUsers()]
+      );
 
       setEvents(activitiesData);
       setTypeActivities(typeActivitiesData);
@@ -86,15 +110,15 @@ export default function EventPage() {
 
     // Apply department filter
     if (selectedDepartment) {
-      filtered = filtered.filter((event) =>
-        event.department?.name === selectedDepartment
+      filtered = filtered.filter(
+        (event) => event.department?.name === selectedDepartment
       );
     }
 
     // Apply category filter
     if (selectedCategory) {
-      filtered = filtered.filter((event) =>
-        event.typeActivity?.id === selectedCategory
+      filtered = filtered.filter(
+        (event) => event.typeActivity?.id === selectedCategory
       );
     }
 
@@ -105,7 +129,10 @@ export default function EventPage() {
   const getSummary = () => {
     const filtered = getFilteredEvents();
     const totalActivities = filtered.length;
-    const totalHours = filtered.reduce((sum, event) => sum + (event.hour || 0), 0);
+    const totalHours = filtered.reduce(
+      (sum, event) => sum + (event.hour || 0),
+      0
+    );
     return { totalActivities, totalHours };
   };
 
@@ -125,14 +152,24 @@ export default function EventPage() {
       description: record.description,
       departmentId: record.departmentId,
       typeActivityId: record.typeActivityId,
-      majorIds: record.majorJoins?.map(mj => mj.majorId) || [],
+      majorIds: record.majorJoins?.map((mj) => mj.majorId) || [],
       level: record.level,
-      startDate: record.startDate?.split('T')[0],
-      endDate: record.endDate?.split('T')[0],
+      startDate: record.startDate?.split("T")[0],
+      endDate: record.endDate?.split("T")[0],
       address: record.address,
       hour: record.hour,
       maxPeopleCount: record.maxPeopleCount,
       remarks: record.remarks,
+      pdfDocument: record.pdfDocument
+        ? [
+            {
+              uid: "-1",
+              name: record.pdfDocument.split("/").pop() || "document.pdf",
+              status: "done",
+              url: record.pdfDocument,
+            },
+          ]
+        : [],
     });
     setIsModalVisible(true);
   };
@@ -163,34 +200,50 @@ export default function EventPage() {
       const userStr = localStorage.getItem("user");
       const currentUser = userStr ? JSON.parse(userStr) : null;
 
-      // Prepare data for API
-      const activityData = {
-        name: values.name,
-        description: values.description,
-        departmentId: values.departmentId,
-        responsibleId: currentUser?.id || "",
-        typeActivityId: values.typeActivityId,
-        majorIds: values.majorIds || [],
-        level: values.level,
-        startDate: new Date(values.startDate).toISOString(),
-        endDate: new Date(values.endDate).toISOString(),
-        date: new Date(values.startDate).toISOString(), // Use startDate as date
-        address: values.address,
-        hour: parseInt(values.hour),
-        maxPeopleCount: parseInt(values.maxPeopleCount),
-        peopleCount: 0,
-        year: new Date(values.startDate).getFullYear() + 543, // Convert to Buddhist year
-        status: "planned",
-        remarks: values.remarks || "",
-      };
+      // Prepare FormData for API
+      const formData = new FormData();
+      formData.append("name", values.name);
+      formData.append("description", values.description);
+      formData.append("departmentId", values.departmentId);
+      formData.append("typeActivityId", values.typeActivityId);
+      formData.append("level", values.level);
+      formData.append("startDate", new Date(values.startDate).toISOString());
+      formData.append("endDate", new Date(values.endDate).toISOString());
+      formData.append("address", values.address);
+      formData.append("hour", parseInt(values.hour));
+      formData.append("date", new Date(values.startDate).toISOString());
+      formData.append("maxPeopleCount", parseInt(values.maxPeopleCount));
+      formData.append("responsibleId", currentUser?.id || "");
+      formData.append("peopleCount", 0);
+      formData.append("year", new Date(values.startDate).getFullYear() + 543);
+      formData.append("status", "planned");
+
+      // Handle major IDs (array)
+      if (values.majorIds && values.majorIds.length > 0) {
+        values.majorIds.forEach((majorId) => {
+          formData.append("majorIds", majorId);
+        });
+      }
+
+      // Handle PDF file upload
+      if (values.pdfDocument && values.pdfDocument.length > 0) {
+        const file = values.pdfDocument[0];
+        if (file.originFileObj) {
+          // New file to upload
+          formData.append("pdfDocument", file.originFileObj);
+        } else if (file.url) {
+          // Existing file URL
+          formData.append("pdfDocumentUrl", file.url);
+        }
+      }
 
       if (editingEvent) {
         // Update existing event
-        await updateActivity(editingEvent.id, activityData);
+        await updateActivity(editingEvent.id, formData);
         message.success("แก้ไขกิจกรรมสำเร็จ");
       } else {
         // Create new event
-        await createActivity(activityData);
+        await createActivity(formData);
         message.success("เพิ่มกิจกรรมสำเร็จ");
       }
 
@@ -198,7 +251,9 @@ export default function EventPage() {
       form.resetFields();
       fetchData(); // Refresh events list
     } catch (error) {
-      message.error(editingEvent ? "ไม่สามารถแก้ไขกิจกรรมได้" : "ไม่สามารถเพิ่มกิจกรรมได้");
+      message.error(
+        editingEvent ? "ไม่สามารถแก้ไขกิจกรรมได้" : "ไม่สามารถเพิ่มกิจกรรมได้"
+      );
       console.error("Error submitting activity:", error);
     } finally {
       setLoading(false);
@@ -266,7 +321,11 @@ export default function EventPage() {
         const max = record.maxPeopleCount || 0;
         const percentage = max > 0 ? (count / max) * 100 : 0;
         const color =
-          percentage >= 80 ? "#f5222d" : percentage >= 50 ? "#fa8c16" : "#0A894C";
+          percentage >= 80
+            ? "#f5222d"
+            : percentage >= 50
+            ? "#fa8c16"
+            : "#0A894C";
 
         return (
           <span
@@ -375,8 +434,8 @@ export default function EventPage() {
               size="middle"
             >
               {departments.map((dept) => (
-                <Option key={dept} value={dept}>
-                  {dept}
+                <Option key={dept.id} value={dept.name}>
+                  {dept.name}
                 </Option>
               ))}
             </Select>
@@ -429,8 +488,12 @@ export default function EventPage() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-white text-sm mb-1 opacity-90">Total Activities</p>
-              <h2 className="text-white text-3xl font-bold">{getSummary().totalActivities}</h2>
+              <p className="text-white text-sm mb-1 opacity-90">
+                Total Activities
+              </p>
+              <h2 className="text-white text-3xl font-bold">
+                {getSummary().totalActivities}
+              </h2>
             </div>
             <div
               className="p-4 rounded-full"
@@ -451,8 +514,12 @@ export default function EventPage() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-white text-sm mb-1 opacity-90">Total Activity Hours</p>
-              <h2 className="text-white text-3xl font-bold">{getSummary().totalHours}</h2>
+              <p className="text-white text-sm mb-1 opacity-90">
+                Total Activity Hours
+              </p>
+              <h2 className="text-white text-3xl font-bold">
+                {getSummary().totalHours}
+              </h2>
             </div>
             <div
               className="p-4 rounded-full"
@@ -624,7 +691,9 @@ export default function EventPage() {
             <Form.Item
               label="จำนวนชั่วโมงกิจกรรม (Activity Hours)"
               name="hour"
-              rules={[{ required: true, message: "Please enter activity hours" }]}
+              rules={[
+                { required: true, message: "Please enter activity hours" },
+              ]}
             >
               <Input type="number" placeholder="Hours" min={1} />
             </Form.Item>
@@ -638,12 +707,38 @@ export default function EventPage() {
             </Form.Item>
           </div>
 
-          <Form.Item
-            label="หมายเหตุ (Remarks)"
-            name="remarks"
-          >
-            <Input.TextArea rows={2} placeholder="Additional notes or remarks" />
+          <Form.Item label="หมายเหตุ (Remarks)" name="remarks">
+            <Input.TextArea
+              rows={3}
+              placeholder="Additional notes or remarks"
+            />
           </Form.Item>
+
+          {/* upload file pdf */}
+          <div className="space-y-2">
+            <label className="font-medium text-gray-700">
+              อัปโหลดเอกสาร PDF (Upload PDF Document)
+            </label>
+            <Form.Item
+              name="pdfDocument"
+              valuePropName="fileList"
+              getValueFromEvent={(e) =>
+                Array.isArray(e) ? e : e && e.fileList
+              }
+            >
+              <Upload
+                name="pdf"
+                listType="text"
+                accept=".pdf"
+                maxCount={1}
+                beforeUpload={() => false}
+              >
+                <Button icon={<UploadIcon size={16} />}>
+                  Click to Upload PDF
+                </Button>
+              </Upload>
+            </Form.Item>
+          </div>
         </Form>
       </Modal>
 
@@ -672,31 +767,46 @@ export default function EventPage() {
         {viewingEvent && (
           <div className="mt-4 space-y-3">
             <div>
-              <label className="font-semibold text-gray-700">ชื่อกิจกรรม (Activity Name):</label>
+              <label className="font-semibold text-gray-700">
+                ชื่อกิจกรรม (Activity Name):
+              </label>
               <p className="text-gray-600 mt-1">{viewingEvent.name}</p>
             </div>
             <div>
-              <label className="font-semibold text-gray-700">รายละเอียด (Description):</label>
+              <label className="font-semibold text-gray-700">
+                รายละเอียด (Description):
+              </label>
               <p className="text-gray-600 mt-1">{viewingEvent.description}</p>
             </div>
             <div>
-              <label className="font-semibold text-gray-700">ภาควิชา (Department):</label>
+              <label className="font-semibold text-gray-700">
+                ภาควิชา (Department):
+              </label>
               <div className="mt-1">
                 <Tag color="blue">{viewingEvent.department?.name || "-"}</Tag>
               </div>
             </div>
             <div>
-              <label className="font-semibold text-gray-700">ประเภทกิจกรรม (Category):</label>
+              <label className="font-semibold text-gray-700">
+                ประเภทกิจกรรม (Category):
+              </label>
               <div className="mt-1">
-                <Tag color="green">{viewingEvent.typeActivity?.name || "-"}</Tag>
+                <Tag color="green">
+                  {viewingEvent.typeActivity?.name || "-"}
+                </Tag>
               </div>
             </div>
             <div>
-              <label className="font-semibold text-gray-700">สาขาวิชา (Major):</label>
+              <label className="font-semibold text-gray-700">
+                สาขาวิชา (Major):
+              </label>
               <div className="mt-1 flex flex-wrap gap-2">
-                {viewingEvent.majorJoins && viewingEvent.majorJoins.length > 0 ? (
+                {viewingEvent.majorJoins &&
+                viewingEvent.majorJoins.length > 0 ? (
                   viewingEvent.majorJoins.map((mj, idx) => (
-                    <Tag key={idx} color="#0A894C">{mj.major?.name}</Tag>
+                    <Tag key={idx} color="#0A894C">
+                      {mj.major?.name}
+                    </Tag>
                   ))
                 ) : (
                   <span className="text-gray-500 text-sm">ทุกสาขา</span>
@@ -704,51 +814,105 @@ export default function EventPage() {
               </div>
             </div>
             <div>
-              <label className="font-semibold text-gray-700">ระดับชั้นปี (Year Level):</label>
+              <label className="font-semibold text-gray-700">
+                ระดับชั้นปี (Year Level):
+              </label>
               <div className="mt-1">
                 <Tag color="purple">{viewingEvent.level || "-"}</Tag>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="font-semibold text-gray-700">ระยะเวลาที่จัด (Duration):</label>
+                <label className="font-semibold text-gray-700">
+                  ระยะเวลาที่จัด (Duration):
+                </label>
                 <p className="text-gray-600 mt-1">
-                  {viewingEvent.startDate?.split('T')[0]} to {viewingEvent.endDate?.split('T')[0]}
+                  {viewingEvent.startDate?.split("T")[0]} to{" "}
+                  {viewingEvent.endDate?.split("T")[0]}
                 </p>
               </div>
               <div>
-                <label className="font-semibold text-gray-700">สถานที่ (Location):</label>
+                <label className="font-semibold text-gray-700">
+                  สถานที่ (Location):
+                </label>
                 <p className="text-gray-600 mt-1">{viewingEvent.address}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="font-semibold text-gray-700">จำนวนชั่วโมง (Activity Hours):</label>
+                <label className="font-semibold text-gray-700">
+                  จำนวนชั่วโมง (Activity Hours):
+                </label>
                 <p className="text-gray-600 mt-1">{viewingEvent.hour} hours</p>
               </div>
               <div>
-                <label className="font-semibold text-gray-700">นักศึกษา (Students):</label>
+                <label className="font-semibold text-gray-700">
+                  นักศึกษา (Students):
+                </label>
                 <p className="text-gray-600 mt-1">
-                  {viewingEvent.peopleCount}/{viewingEvent.maxPeopleCount} students
+                  {viewingEvent.peopleCount}/{viewingEvent.maxPeopleCount}{" "}
+                  students
                 </p>
               </div>
             </div>
             <div>
-              <label className="font-semibold text-gray-700">สถานะ (Status):</label>
+              <label className="font-semibold text-gray-700">
+                สถานะ (Status):
+              </label>
               <div className="mt-1">
-                <Tag color={
-                  viewingEvent.status === "completed" ? "green" :
-                  viewingEvent.status === "inprogress" ? "blue" :
-                  viewingEvent.status === "cancelled" ? "red" : "orange"
-                }>
+                <Tag
+                  color={
+                    viewingEvent.status === "completed"
+                      ? "green"
+                      : viewingEvent.status === "inprogress"
+                      ? "blue"
+                      : viewingEvent.status === "cancelled"
+                      ? "red"
+                      : "orange"
+                  }
+                >
                   {viewingEvent.status}
                 </Tag>
               </div>
             </div>
             {viewingEvent.remarks && (
               <div>
-                <label className="font-semibold text-gray-700">หมายเหตุ (Remarks):</label>
+                <label className="font-semibold text-gray-700">
+                  หมายเหตุ (Remarks):
+                </label>
                 <p className="text-gray-600 mt-1">{viewingEvent.remarks}</p>
+              </div>
+            )}
+            {viewingEvent.pdfDocument && (
+              <div>
+                <label className="font-semibold text-gray-700">
+                  เอกสาร PDF (PDF Document):
+                </label>
+                <div className="mt-2">
+                  <a
+                    href={viewingEvent.pdfDocument}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span>
+                      {viewingEvent.pdfDocument.split("/").pop() ||
+                        "View Document"}
+                    </span>
+                  </a>
+                </div>
               </div>
             )}
           </div>

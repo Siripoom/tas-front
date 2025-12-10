@@ -119,7 +119,7 @@ const Sidebar = ({ userRole = "student", collapsed = false, onCollapse }) => {
       collapsible
       collapsed={collapsed}
       onCollapse={onCollapse}
-      theme="dark"
+      theme="light"
       width={250}
       style={{
         overflow: "auto",
@@ -128,8 +128,9 @@ const Sidebar = ({ userRole = "student", collapsed = false, onCollapse }) => {
         left: 0,
         top: 0,
         bottom: 0,
-        background: "linear-gradient(180deg, #0A894C 0%, #086b3d 100%)",
-        boxShadow: "2px 0 8px rgba(0,0,0,0.15)",
+        background: "#ffffff",
+        boxShadow: "2px 0 8px rgba(0,0,0,0.08)",
+        borderRight: "1px solid #f0f0f0",
       }}
     >
       <div
@@ -139,10 +140,6 @@ const Sidebar = ({ userRole = "student", collapsed = false, onCollapse }) => {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#ffffff",
-          borderRadius: 12,
-          padding: "12px",
-          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
         }}
       >
         <Image
@@ -162,29 +159,29 @@ const Sidebar = ({ userRole = "student", collapsed = false, onCollapse }) => {
         style={{
           borderRight: 0,
           background: "transparent",
-          color: "#ffffff",
+          color: "#0A894C",
         }}
-        theme="dark"
+        theme="light"
         className="custom-sidebar-menu"
       />
       <style jsx global>{`
         .custom-sidebar-menu .ant-menu-item {
-          color: rgba(255, 255, 255, 0.85) !important;
+          color: #0a894c !important;
           margin: 4px 8px !important;
           border-radius: 8px !important;
           transition: all 0.3s ease !important;
         }
 
         .custom-sidebar-menu .ant-menu-item:hover {
-          background: rgba(255, 255, 255, 0.15) !important;
-          color: #ffffff !important;
+          background: rgba(10, 137, 76, 0.08) !important;
+          color: #0a894c !important;
         }
 
         .custom-sidebar-menu .ant-menu-item-selected {
-          background: rgba(255, 255, 255, 0.2) !important;
-          color: #ffffff !important;
+          background: rgba(10, 137, 76, 0.12) !important;
+          color: #0a894c !important;
           font-weight: 600 !important;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+          box-shadow: 0 2px 8px rgba(10, 137, 76, 0.15) !important;
         }
 
         .custom-sidebar-menu .ant-menu-item-selected::after {
@@ -192,13 +189,13 @@ const Sidebar = ({ userRole = "student", collapsed = false, onCollapse }) => {
         }
 
         .ant-layout-sider-trigger {
-          background: rgba(0, 0, 0, 0.2) !important;
-          color: #ffffff !important;
-          border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+          background: #f8f9fa !important;
+          color: #0a894c !important;
+          border-top: 1px solid #e8e8e8 !important;
         }
 
         .ant-layout-sider-trigger:hover {
-          background: rgba(0, 0, 0, 0.3) !important;
+          background: rgba(10, 137, 76, 0.08) !important;
         }
       `}</style>
     </Sider>

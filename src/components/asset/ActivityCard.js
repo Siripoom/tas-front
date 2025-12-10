@@ -13,19 +13,17 @@ const ActivityCard = ({ title, department, date, imageUrl }) => {
       className="h-full rounded-xl overflow-hidden border border-gray-200 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
       cover={
         imageUrl ? (
-          <div className="relative h-48 bg-gradient-to-br from-[#3D5753] to-[#5a7d77]">
+          <div className="relative h-48 bg-white">
             <Image src={imageUrl} alt={title} fill className="object-cover" />
           </div>
         ) : (
-          <div className="h-48 bg-gradient-to-br from-[#3D5753] to-[#5a7d77] flex items-center justify-center">
-            <div className="text-white/80 text-center p-6">
-              <div className="text-5xl mb-2">📰</div>
-              <p
-                className="text-sm font-medium"
-                sx={{ fontFamily: "Noto Sans Thai" }}
-              >
-                ข่าวสารกิจกรรม
-              </p>
+          <div className="h-48 bg-white flex items-center justify-center">
+            <div className="flex items-center justify-center w-full h-full p-6">
+              <img
+                src="/Logo.png"
+                alt="Logo"
+                className="w-32 h-32 object-contain"
+              />
             </div>
           </div>
         )

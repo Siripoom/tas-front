@@ -35,7 +35,7 @@ export default function StudentLayout({ children }) {
         console.log("User Data:", userData);
 
         // Check if role is student
-        if (userData.role !== "student") {
+        if (userData.userType !== "student") {
           // If not student, redirect to login page
           alert("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
           localStorage.clear(); // ลบข้อมูลทั้งหมด

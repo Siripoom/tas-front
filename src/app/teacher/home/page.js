@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, Row, Col, Statistic, Select, Progress, Tag, message } from "antd";
+import {
+  Card,
+  Row,
+  Col,
+  Statistic,
+  Select,
+  Progress,
+  Tag,
+  message,
+} from "antd";
 import {
   Users,
   Calendar,
@@ -298,7 +307,7 @@ export default function TeacherHome() {
         }
       >
         {/* Filters */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               ปีการศึกษา (Academic Year)
@@ -335,7 +344,7 @@ export default function TeacherHome() {
               ))}
             </Select>
           </div>
-        </div>
+        </div> */}
 
         {/* Filter Summary */}
         {selectedCategory && (

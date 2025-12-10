@@ -33,7 +33,7 @@ export default function AdminLayout({ children }) {
         console.log("User Data:", userData);
 
         // เช็คว่า role เป็น admin หรือไม่
-        if (userData.role === "admin") {
+        if (userData.userType !== "admin") {
           // ถ้าไม่ใช่ admin ให้ redirect ไปหน้า login
           alert("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
           localStorage.clear(); // ลบข้อมูลทั้งหมด

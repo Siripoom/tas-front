@@ -11,6 +11,7 @@ import {
   Modal,
   message,
   Tag,
+  Spin,
 } from "antd";
 import {
   CalendarCheck,
@@ -22,12 +23,18 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
+import { getAllActivities } from "@/services/activity";
+import { createAttendance, getAttendancesByUser } from "@/services/attendance";
 
 export default function StudentHome() {
   const carouselRef = useRef(null);
   const [userInfo, setUserInfo] = useState(null);
   const [selectedActivity, setSelectedActivity] = useState(null);
   const [joinModalVisible, setJoinModalVisible] = useState(false);
+  const [availableActivities, setAvailableActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [userAttendances, setUserAttendances] = useState([]);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -41,126 +48,69 @@ export default function StudentHome() {
     }
   }, []);
 
-  // Mock data for available activities
-  const availableActivities = [
-    {
-      id: 1,
-      name: "AI Technology Lecture",
-      category: "Academic Activity",
-      department: "Computer Education",
-      date: "15 Jan 2025",
-      time: "13:00 - 16:00",
-      location: "Room A301",
-      hours: 3,
-      maxParticipants: 50,
-      currentParticipants: 32,
-      image: null,
-    },
-    {
-      id: 2,
-      name: "Community Development",
-      category: "Volunteer Activity",
-      department: "Civil Engineering Education",
-      date: "20 Jan 2025",
-      time: "09:00 - 15:00",
-      location: "Suan Dok Community",
-      hours: 6,
-      maxParticipants: 30,
-      currentParticipants: 18,
-      image: null,
-    },
-    {
-      id: 3,
-      name: "Internal Sports Competition",
-      category: "Sports Activity",
-      department: "Mechanical Engineering Education",
-      date: "25 Jan 2025",
-      time: "08:00 - 17:00",
-      location: "Main Stadium",
-      hours: 8,
-      maxParticipants: 100,
-      currentParticipants: 76,
-      image: null,
-    },
-    {
-      id: 4,
-      name: "Thai Art and Culture Event",
-      category: "Art and Culture",
-      department: "Electrical Engineering",
-      date: "1 Feb 2025",
-      time: "10:00 - 16:00",
-      location: "Main Hall",
-      hours: 6,
-      maxParticipants: 80,
-      currentParticipants: 45,
-      image: null,
-    },
-    {
-      id: 5,
-      name: "Buddhist Merit Making",
-      category: "Religious Activity",
-      department: "Information Technology Education",
-      date: "5 Feb 2025",
-      time: "07:00 - 09:00",
-      location: "Building 1 Front Yard",
-      hours: 2,
-      maxParticipants: 200,
-      currentParticipants: 134,
-      image: null,
-    },
-    {
-      id: 6,
-      name: "Industrial Plant Visit",
-      category: "Study Tour",
-      department: "Mechanical Engineering Education",
-      date: "10 Feb 2025",
-      time: "08:00 - 17:00",
-      location: "Rayong Province",
-      hours: 8,
-      maxParticipants: 40,
-      currentParticipants: 28,
-      image: null,
-    },
-    {
-      id: 7,
-      name: "Student Council Meeting 1/2025",
-      category: "Student Council",
-      department: "Computer Education",
-      date: "15 Feb 2025",
-      time: "14:00 - 16:00",
-      location: "Student Council Room",
-      hours: 2,
-      maxParticipants: 60,
-      currentParticipants: 22,
-      image: null,
-    },
-    {
-      id: 8,
-      name: "Workshop: Web Development",
-      category: "Academic Activity",
-      department: "Computer Education",
-      date: "20 Feb 2025",
-      time: "13:00 - 17:00",
-      location: "Computer Lab 2",
-      hours: 4,
-      maxParticipants: 35,
-      currentParticipants: 30,
-      image: null,
-    },
-    {
-      id: 9,
-      name: "Royal Reforestation Project",
-      category: "Volunteer Activity",
-      department: "Civil Engineering Education",
-      date: "25 Feb 2025",
-      time: "08:00 - 12:00",
-      location: "Wildlife Sanctuary",
-      hours: 4,
-      maxParticipants: 50,
-      currentParticipants: 41,
-      image: null,
-    },
-  ];
+  // Fetch user's attendances
+  useEffect(() => {
+    const fetchUserAttendances = async () => {
+      if (!userInfo?.id) return;
+
+      try {
+        const attendances = await getAttendancesByUser(userInfo.id);
+        setUserAttendances(attendances);
+      } catch (error) {
+        console.error("Error fetching user attendances:", error);
+      }
+    };
+
+    fetchUserAttendances();
+  }, [userInfo]);
+
+  // Fetch activities from API
+  useEffect(() => {
+    const fetchActivities = async () => {
+      try {
+        setLoading(true);
+        const response = await getAllActivities();
+
+        // Transform API data to match component structure
+        const transformedData = response.map((activity) => ({
+          id: activity.id,
+          name: activity.name,
+          category: activity.typeActivity?.name || "ไม่ระบุประเภท",
+          department: activity.department?.name || "ไม่ระบุภาควิชา",
+          date: new Date(activity.date).toLocaleDateString("th-TH", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }),
+          time:
+            activity.startDate && activity.endDate
+              ? `${new Date(activity.startDate).toLocaleTimeString("th-TH", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })} - ${new Date(activity.endDate).toLocaleTimeString("th-TH", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}`
+              : "ไม่ระบุเวลา",
+          location: activity.address || "ไม่ระบุสถานที่",
+          hours: activity.hour || 0,
+          maxParticipants: activity.maxPeopleCount || 0,
+          currentParticipants: activity.attendances?.length || 0,
+          image: activity.fileActivities?.[0]?.fileUrl || null,
+        }));
+
+        setAvailableActivities(transformedData);
+      } catch (error) {
+        console.error("Error fetching activities:", error);
+        message.error("ไม่สามารถโหลดข้อมูลกิจกรรมได้");
+        setAvailableActivities([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchActivities();
+  }, []);
 
   // Mock data for student activity statistics
   const activityStats = [
@@ -240,16 +190,83 @@ export default function StudentHome() {
     setJoinModalVisible(true);
   };
 
-  const confirmJoinActivity = () => {
-    message.success(`Successfully registered for "${selectedActivity.name}"`);
-    setJoinModalVisible(false);
-    setSelectedActivity(null);
+  const confirmJoinActivity = async () => {
+    if (!userInfo?.id) {
+      message.error("ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      // Create attendance record
+      await createAttendance({
+        userId: userInfo.id,
+        activityId: selectedActivity.id,
+        status: "joined", // or "registered" based on your system
+      });
+
+      message.success(
+        `ลงทะเบียนกิจกรรม "${selectedActivity.name}" เรียบร้อยแล้ว`
+      );
+      setJoinModalVisible(false);
+      setSelectedActivity(null);
+
+      // Refresh activities to update participant count
+      const response = await getAllActivities();
+      const transformedData = response.map((activity) => ({
+        id: activity.id,
+        name: activity.name,
+        category: activity.typeActivity?.name || "ไม่ระบุประเภท",
+        department: activity.department?.name || "ไม่ระบุภาควิชา",
+        date: new Date(activity.date).toLocaleDateString("th-TH", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }),
+        time:
+          activity.startDate && activity.endDate
+            ? `${new Date(activity.startDate).toLocaleTimeString("th-TH", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })} - ${new Date(activity.endDate).toLocaleTimeString("th-TH", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}`
+            : "ไม่ระบุเวลา",
+        location: activity.address || "ไม่ระบุสถานที่",
+        hours: activity.hour || 0,
+        maxParticipants: activity.maxPeopleCount || 0,
+        currentParticipants: activity.attendances?.length || 0,
+        image: activity.fileActivities?.[0]?.fileUrl || null,
+      }));
+      setAvailableActivities(transformedData);
+
+      // Refresh user attendances
+      if (userInfo?.id) {
+        const attendances = await getAttendancesByUser(userInfo.id);
+        setUserAttendances(attendances);
+      }
+    } catch (error) {
+      console.error("Error joining activity:", error);
+      message.error(
+        error.response?.data?.message ||
+          "ไม่สามารถลงทะเบียนกิจกรรมได้ กรุณาลองใหม่อีกครั้ง"
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const ActivityCard = ({ activity }) => {
     const availableSlots =
       activity.maxParticipants - activity.currentParticipants;
     const isFull = availableSlots === 0;
+
+    // Check if user already joined this activity
+    const isJoined = userAttendances.some(
+      (attendance) => attendance.activityId === activity.id
+    );
 
     return (
       <Card
@@ -320,17 +337,25 @@ export default function StudentHome() {
           type="primary"
           block
           size="large"
-          disabled={isFull}
+          disabled={isFull || isJoined}
           onClick={() => handleJoinActivity(activity)}
           style={{
-            backgroundColor: isFull ? "#d1d5db" : "#0A894C",
-            borderColor: isFull ? "#d1d5db" : "#0A894C",
+            backgroundColor: isJoined
+              ? "#10b981"
+              : isFull
+              ? "#d1d5db"
+              : "#0A894C",
+            borderColor: isJoined ? "#10b981" : isFull ? "#d1d5db" : "#0A894C",
             borderRadius: 8,
             height: 44,
             fontWeight: 600,
           }}
         >
-          {isFull ? "Full" : "Register Now"}
+          {isJoined
+            ? "เข้าร่วมแล้ว ✓"
+            : isFull
+            ? "เต็ม"
+            : "ลงทะเบียนเข้าร่วมกิจกรรม"}
         </Button>
       </Card>
     );
@@ -490,7 +515,10 @@ export default function StudentHome() {
           boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
         }}
       >
-        <h2 className="text-lg md:text-xl font-bold mb-4" style={{ color: "#0A894C" }}>
+        <h2
+          className="text-lg md:text-xl font-bold mb-4"
+          style={{ color: "#0A894C" }}
+        >
           Activity Statistics by Category
         </h2>
         <Row gutter={[12, 12]}>
@@ -501,7 +529,7 @@ export default function StudentHome() {
           ))}
         </Row>
       </Card>
-
+      <br />
       {/* Available Activities Carousel */}
       <Card
         className=""
@@ -511,56 +539,69 @@ export default function StudentHome() {
         }}
       >
         <div className="mb-4 md:mb-6">
-          <h2 className="text-lg md:text-xl font-bold mb-2" style={{ color: "#0A894C" }}>
-            Available Activities
+          <h2
+            className="text-lg md:text-xl font-bold mb-2"
+            style={{ color: "#0A894C" }}
+          >
+            รายการกิจกรรมที่เปิดให้ลงทะเบียน
           </h2>
           <p className="text-sm md:text-base text-gray-600">
-            Choose activities you are interested in and register to earn hours
+            เลือกกิจกรรมที่คุณสนใจและลงทะเบียนเพื่อเพิ่มชั่วโมงกิจกรรมนักศึกษา
           </p>
         </div>
 
         {/* Carousel Container */}
-        <div className="relative">
-          {/* Navigation Buttons */}
-          <button
-            onClick={() => carouselRef.current?.prev()}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 bg-white hover:bg-[#0A894C] text-[#0A894C] hover:text-white p-3 rounded-full shadow-lg transition-all duration-300 border border-gray-200 hover:border-[#0A894C]"
-            aria-label="Previous"
-          >
-            <ChevronLeft size={24} />
-          </button>
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <Spin size="large" tip="กำลังโหลดข้อมูลกิจกรรม..." />
+          </div>
+        ) : availableActivities.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="text-gray-500 text-lg">ไม่พบข้อมูลกิจกรรม</p>
+          </div>
+        ) : (
+          <div className="relative">
+            {/* Navigation Buttons */}
+            <button
+              onClick={() => carouselRef.current?.prev()}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 bg-white hover:bg-[#0A894C] text-[#0A894C] hover:text-white p-3 rounded-full shadow-lg transition-all duration-300 border border-gray-200 hover:border-[#0A894C]"
+              aria-label="Previous"
+            >
+              <ChevronLeft size={24} />
+            </button>
 
-          <button
-            onClick={() => carouselRef.current?.next()}
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 bg-white hover:bg-[#0A894C] text-[#0A894C] hover:text-white p-3 rounded-full shadow-lg transition-all duration-300 border border-gray-200 hover:border-[#0A894C]"
-            aria-label="Next"
-          >
-            <ChevronRight size={24} />
-          </button>
+            <button
+              onClick={() => carouselRef.current?.next()}
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 bg-white hover:bg-[#0A894C] text-[#0A894C] hover:text-white p-3 rounded-full shadow-lg transition-all duration-300 border border-gray-200 hover:border-[#0A894C]"
+              aria-label="Next"
+            >
+              <ChevronRight size={24} />
+            </button>
 
-          {/* Carousel */}
-          <Carousel
-            ref={carouselRef}
-            dots={{
-              className: "custom-activity-dots",
-            }}
-            autoplay
-            autoplaySpeed={6000}
-            speed={800}
-          >
-            {pages.map((pageActivities, pageIndex) => (
-              <div key={pageIndex}>
-                <Row gutter={[16, 16]} className="px-2">
-                  {pageActivities.map((activity) => (
-                    <Col xs={24} sm={12} lg={8} key={activity.id}>
-                      <ActivityCard activity={activity} />
-                    </Col>
-                  ))}
-                </Row>
-              </div>
-            ))}
-          </Carousel>
-        </div>
+            {/* Carousel */}
+            <Carousel
+              ref={carouselRef}
+              dots={{
+                className: "custom-activity-dots",
+              }}
+              autoplay
+              autoplaySpeed={6000}
+              speed={800}
+            >
+              {pages.map((pageActivities, pageIndex) => (
+                <div key={pageIndex}>
+                  <Row gutter={[16, 16]} className="px-2">
+                    {pageActivities.map((activity) => (
+                      <Col xs={24} sm={12} lg={8} key={activity.id}>
+                        <ActivityCard activity={activity} />
+                      </Col>
+                    ))}
+                  </Row>
+                </div>
+              ))}
+            </Carousel>
+          </div>
+        )}
       </Card>
 
       {/* Join Activity Confirmation Modal */}
@@ -568,7 +609,7 @@ export default function StudentHome() {
         title={
           <div className="flex items-center gap-2">
             <CalendarCheck size={20} style={{ color: "#0A894C" }} />
-            <span className="text-base md:text-lg">Confirm Registration</span>
+            <span className="text-base md:text-lg">ยืนยันการลงทะเบียน</span>
           </div>
         }
         open={joinModalVisible}
@@ -577,13 +618,16 @@ export default function StudentHome() {
           setJoinModalVisible(false);
           setSelectedActivity(null);
         }}
-        okText="Confirm"
-        cancelText="Cancel"
+        okText="ยืนยัน"
+        cancelText="ยกเลิก"
+        confirmLoading={submitting}
         okButtonProps={{
           style: { backgroundColor: "#0A894C", borderColor: "#0A894C" },
         }}
-        width={typeof window !== 'undefined' && window.innerWidth < 768 ? "95%" : 500}
-        styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }}
+        width={
+          typeof window !== "undefined" && window.innerWidth < 768 ? "95%" : 500
+        }
+        styles={{ body: { maxHeight: "70vh", overflowY: "auto" } }}
       >
         {selectedActivity && (
           <div className="py-4">
@@ -612,10 +656,10 @@ export default function StudentHome() {
             <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
               <p className="text-sm text-green-800">
                 <CheckCircle size={16} className="inline mr-1" />
-                You will earn <strong>
-                  {selectedActivity.hours} hours
+                คุณจะได้รับ <strong>
+                  {selectedActivity.hours} ชั่วโมง
                 </strong>{" "}
-                from this activity
+                จากกิจกรรมนี้
               </p>
             </div>
           </div>

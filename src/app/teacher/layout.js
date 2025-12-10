@@ -33,7 +33,7 @@ export default function TeacherLayout({ children }) {
         console.log("User Data:", userData);
 
         // เช็คว่า role เป็น teacher หรือไม่
-        if (userData.role === "teacher") {
+        if (userData.userType === "teacher") {
           // ถ้าไม่ใช่ teacher ให้ redirect ไปหน้า login
           alert("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
           localStorage.clear(); // ลบข้อมูลทั้งหมด
